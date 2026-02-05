@@ -11,6 +11,10 @@
 #include <linux/types.h>
 #include <linux/bpf_common.h>
 
+#ifndef __aligned_u64
+#define __aligned_u64 __u64 __attribute__((aligned(8)))
+#endif
+
 /* Extended instruction set based on top of classic BPF */
 
 /* instruction classes */
