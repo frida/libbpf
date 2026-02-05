@@ -16,9 +16,109 @@
 #include <linux/err.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/epoll.h>
 #include <sys/syscall.h>
+#include <sys/stat.h>
 #include <libelf.h>
 #include "relo_core.h"
+
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 02000000
+#endif
+
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC O_CLOEXEC
+#endif
+
+#ifndef F_DUPFD_CLOEXEC
+#define F_DUPFD_CLOEXEC 1030
+#endif
+
+#ifndef EPOLL_CLOEXEC
+#define EPOLL_CLOEXEC O_CLOEXEC
+#endif
+
+#ifndef __NR_epoll_create1
+# if defined(__i386__)
+#  define __NR_epoll_create1 329
+# elif defined(__x86_64__)
+#  define __NR_epoll_create1 291
+# elif defined(__arm__)
+#  define __NR_epoll_create1 357
+# elif defined(__aarch64__)
+#  define __NR_epoll_create1 20
+# elif defined(__mips__) && defined(_ABIO32)
+#  define __NR_epoll_create1 4326
+# endif
+#endif
+
+#ifndef __NR_dup3
+# if defined(__i386__)
+#  define __NR_dup3 330
+# elif defined(__x86_64__)
+#  define __NR_dup3 292
+# elif defined(__arm__)
+#  define __NR_dup3 358
+# elif defined(__aarch64__)
+#  define __NR_dup3 24
+# elif defined(__mips__) && defined(_ABIO32)
+#  define __NR_dup3 4327
+# endif
+#endif
+
+#ifndef __NR_perf_event_open
+# if defined(__i386__)
+#  define __NR_perf_event_open 336
+# elif defined(__x86_64__)
+#  define __NR_perf_event_open 298
+# elif defined(__arm__)
+#  define __NR_perf_event_open 364
+# elif defined(__aarch64__)
+#  define __NR_perf_event_open 241
+# elif defined(__mips__) && defined(_ABIO32)
+#  define __NR_perf_event_open 4333
+# endif
+#endif
+
+#ifndef __NR_memfd_create
+# if defined(__i386__)
+#  define __NR_memfd_create 356
+# elif defined(__x86_64__)
+#  define __NR_memfd_create 319
+# elif defined(__arm__)
+#  define __NR_memfd_create 385
+# elif defined(__aarch64__)
+#  define __NR_memfd_create 279
+# elif defined(__mips__) && defined(_ABIO32)
+#  define __NR_memfd_create 4354
+# endif
+#endif
+
+#ifndef __NR_bpf
+# if defined(__i386__)
+#  define __NR_bpf 357
+# elif defined(__x86_64__)
+#  define __NR_bpf 321
+# elif defined(__arm__)
+#  define __NR_bpf 386
+# elif defined(__aarch64__)
+#  define __NR_bpf 280
+# elif defined(__sparc__)
+#  define __NR_bpf 349
+# elif defined(__s390__)
+#  define __NR_bpf 351
+# elif defined(__arc__)
+#  define __NR_bpf 280
+# elif defined(__mips__) && defined(_ABIO32)
+#  define __NR_bpf 4355
+# elif defined(__mips__) && defined(_ABIN32)
+#  define __NR_bpf 6319
+# elif defined(__mips__) && defined(_ABI64)
+#  define __NR_bpf 5315
+# else
+#  error __NR_bpf not defined. libbpf does not support your arch.
+# endif
+#endif
 
 /* Android's libc doesn't support AT_EACCESS in faccessat() implementation
  * ([0]), and just returns -EINVAL even if file exists and is accessible.
@@ -323,6 +423,12 @@ static inline bool libbpf_validate_opts(const char *opts,
 		return false;
 	}
 	return true;
+}
+
+static inline bool libbpf_is_file_present(const char *path)
+{
+	struct stat st;
+	return stat(path, &st) == 0;
 }
 
 #define OPTS_VALID(opts, type)						      \
@@ -672,6 +778,11 @@ static inline int ensure_good_fd(int fd)
 		}
 	}
 	return fd;
+}
+
+static inline int sys_epoll_create1(int flags)
+{
+	return syscall(__NR_epoll_create1, flags);
 }
 
 static inline int sys_dup3(int oldfd, int newfd, int flags)

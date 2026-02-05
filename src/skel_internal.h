@@ -11,7 +11,6 @@
 #include <linux/bpf.h>
 #else
 #include <unistd.h>
-#include <sys/syscall.h>
 #include <sys/mman.h>
 #include <linux/keyctl.h>
 #include <stdlib.h>
@@ -20,16 +19,6 @@
 
 #ifndef SHA256_DIGEST_LENGTH
 #define SHA256_DIGEST_LENGTH 32
-#endif
-
-#ifndef __NR_bpf
-# if defined(__mips__) && defined(_ABIO32)
-#  define __NR_bpf 4355
-# elif defined(__mips__) && defined(_ABIN32)
-#  define __NR_bpf 6319
-# elif defined(__mips__) && defined(_ABI64)
-#  define __NR_bpf 5315
-# endif
 #endif
 
 /* This file is a base header for auto-generated *.lskel.h files.

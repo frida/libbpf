@@ -35,9 +35,6 @@ static __u32 get_ubuntu_kernel_version(void)
 	int ret;
 	FILE *f;
 
-	if (faccessat(AT_FDCWD, ubuntu_kver_file, R_OK, AT_EACCESS) != 0)
-		return 0;
-
 	f = fopen(ubuntu_kver_file, "re");
 	if (!f)
 		return 0;

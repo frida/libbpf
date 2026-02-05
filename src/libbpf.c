@@ -35,7 +35,6 @@
 #include <linux/perf_event.h>
 #include <linux/bpf_perf_event.h>
 #include <linux/ring_buffer.h>
-#include <sys/epoll.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -13853,7 +13852,7 @@ static struct perf_buffer *__perf_buffer__new(int map_fd, size_t page_cnt,
 	pb->mmap_size = pb->page_size * page_cnt;
 	pb->map_fd = map_fd;
 
-	pb->epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+	pb->epoll_fd = sys_epoll_create1(EPOLL_CLOEXEC);
 	if (pb->epoll_fd < 0) {
 		err = -errno;
 		pr_warn("failed to create epoll instance: %s\n",

@@ -5498,21 +5498,21 @@ struct btf *btf__load_vmlinux_btf(void)
 	struct btf *btf;
 	int i, err;
 
-	/* is canonical sysfs location accessible? */
-	if (faccessat(AT_FDCWD, sysfs_btf_path, F_OK, AT_EACCESS) < 0) {
-		pr_warn("kernel BTF is missing at '%s', was CONFIG_DEBUG_INFO_BTF enabled?\n",
-			sysfs_btf_path);
-	} else {
-		btf = btf_parse_raw_mmap(sysfs_btf_path, NULL);
-		if (IS_ERR(btf))
-			btf = btf__parse(sysfs_btf_path, NULL);
+	btf = btf_parse_raw_mmap(sysfs_btf_path, NULL);
+	if (IS_ERR(btf))
+		btf = btf__parse(sysfs_btf_path, NULL);
 
-		if (!btf) {
-			err = -errno;
+	if (IS_ERR(btf)) {
+		err = PTR_ERR(btf);
+
+		if (err == -ENOENT) {
+			pr_warn("kernel BTF is missing at '%s', was CONFIG_DEBUG_INFO_BTF enabled?\n",
+				sysfs_btf_path);
+		} else {
 			pr_warn("failed to read kernel BTF from '%s': %s\n",
 				sysfs_btf_path, errstr(err));
-			return libbpf_err_ptr(err);
 		}
+	} else {
 		pr_debug("loaded kernel BTF from '%s'\n", sysfs_btf_path);
 		return btf;
 	}
@@ -5522,7 +5522,7 @@ struct btf *btf__load_vmlinux_btf(void)
 	for (i = 0; i < ARRAY_SIZE(locations); i++) {
 		snprintf(path, PATH_MAX, locations[i], buf.release);
 
-		if (faccessat(AT_FDCWD, path, R_OK, AT_EACCESS))
+		if (!libbpf_is_file_present(path))
 			continue;
 
 		btf = btf__parse(path, NULL);
