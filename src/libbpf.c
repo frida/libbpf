@@ -2346,16 +2346,23 @@ static int bpf_object__read_kconfig_mem(struct bpf_object *obj,
 {
 	char buf[PATH_MAX];
 	int err = 0;
-	FILE *file;
+	const char *cursor, *end;
 
-	file = fmemopen((void *)config, strlen(config), "r");
-	if (!file) {
-		err = -errno;
-		pr_warn("failed to open in-memory Kconfig: %s\n", errstr(err));
-		return err;
-	}
+	if (!config)
+		return -EINVAL;
 
-	while (fgets(buf, sizeof(buf), file)) {
+	cursor = config;
+	end = config + strlen(config);
+
+	while (cursor != end) {
+		size_t len = 0;
+		while (cursor != end && len + 1 != sizeof(buf)) {
+			buf[len++] = *cursor++;
+			if (buf[len - 1] == '\n')
+				break;
+		}
+		buf[len] = '\0';
+
 		err = bpf_object__process_kconfig_line(obj, buf, data);
 		if (err) {
 			pr_warn("error parsing in-memory Kconfig line '%s': %s\n",
@@ -2364,7 +2371,6 @@ static int bpf_object__read_kconfig_mem(struct bpf_object *obj,
 		}
 	}
 
-	fclose(file);
 	return err;
 }
 
