@@ -15,6 +15,7 @@
 #include <linux/bpf.h>
 #include <asm/barrier.h>
 #include <sys/mman.h>
+#include <sys/epoll.h>
 #include <time.h>
 
 #include "libbpf.h"
@@ -201,7 +202,7 @@ ring_buffer__new(int map_fd, ring_buffer_sample_fn sample_cb, void *ctx,
 
 	rb->page_size = getpagesize();
 
-	rb->epoll_fd = sys_epoll_create1(EPOLL_CLOEXEC);
+	rb->epoll_fd = epoll_create1(EPOLL_CLOEXEC);
 	if (rb->epoll_fd < 0) {
 		err = -errno;
 		pr_warn("ringbuf: failed to create epoll instance: %s\n", errstr(err));
@@ -243,7 +244,7 @@ static int64_t ringbuf_process_ring(struct ring *r, size_t n)
 	do {
 		got_new_data = false;
 		prod_pos = smp_load_acquire(r->producer_pos);
-		while (cons_pos < prod_pos) {
+		while (prod_pos - cons_pos > 0) {
 			len_ptr = r->data + (cons_pos & r->mask);
 			len = smp_load_acquire(len_ptr);
 
@@ -528,7 +529,7 @@ user_ring_buffer__new(int map_fd, const struct user_ring_buffer_opts *opts)
 
 	rb->page_size = getpagesize();
 
-	rb->epoll_fd = sys_epoll_create1(EPOLL_CLOEXEC);
+	rb->epoll_fd = epoll_create1(EPOLL_CLOEXEC);
 	if (rb->epoll_fd < 0) {
 		err = -errno;
 		pr_warn("user ringbuf: failed to create epoll instance: %s\n", errstr(err));
