@@ -1,6 +1,6 @@
 [wrap-git]
 url = https://github.com/frida/elfutils.git
-revision = e0e38c51ed986b00d48ec8db93c40f3fc4227cfd
+revision = 7436d958b04c34b3ee3baee240a54284ee099630
 depth = 1
 
 [provide]
